@@ -17,25 +17,49 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
+      # Instalacion de la version de python 
+      - name: Preparando version de Python
+      # Version de la "accion" que instalara Python 
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.10'
+          # De la siguiente forma se instala "la mayor menor version". En este caso, la version 3.0
+          # python-version: '3.x'
+          # Arquitectura 'x64' o 'x86' (por defecto, este valor esta en 'x64')
+          # arquitecture: 'x64'
 
-      - name: Create and start virtual environment
+      - name: Crear e iniciar el entorno virtual
         run: |
           python -m venv venv
           source venv/bin/activate
       
-      - name: Install dependencies
+      - name: Instalar dependencias
+        # Instala las dependencias especificadas en requirements.txt
         run: pip install -r requirements.txt
+        # Tambien se puede instalar o actualizar las dependencias de esta forma
+        # run: python -m pip install --upgrade pip
+
+      - name: Utilizando Ruff
+        run: |
+          pip install ruff
+          ruff check --output-format=github .
+
+      - name: Instalar Tox
+        run: pip install tox
         
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      - name: Ejecutar tox
+        run: tox -e py
 
-      - name: Zip artifact for deployment
+      - name: Pruebas con pytest
+        run: |
+          pip install pytest
+          # Ejecucion del archivo tests.py
+          pytest tests/tests.py
+        
+      - name: Comprimir artefactos para el despliegue
         run: zip release.zip ./* -r
-
-      - name: Upload artifact for deployment jobs
+  
+      - name: Subir artefatos para desplegar el trabajo
         uses: actions/upload-artifact@v4
         with:
           name: python-app
@@ -53,16 +77,16 @@ jobs:
       id-token: write #This is required for requesting the JWT
 
     steps:
-      - name: Download artifact from build job
+      - name: Descargar artefactos 
         uses: actions/download-artifact@v4
         with:
           name: python-app
 
-      - name: Unzip artifact for deployment
+      - name: Descomprimir artefactos para el despliegue
         run: unzip release.zip
 
       
-      - name: Login to Azure
+      - name: Loguear en Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1044B5845F904569AAB6C8BADF8135F8 }}
@@ -73,6 +97,8 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
+          # Nombre de la aplicación
           app-name: 'Desafio'
+          # Nombre del slot
           slot-name: 'Production'
           
